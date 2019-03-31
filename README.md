@@ -1,5 +1,5 @@
 # spring-redis-distributed-lock
-
+<p align="center"><a href="https://gitee.com/lovewestwind/spring-redis-distributed-lock/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-000000.svg" /></a></p>  
 #### 介绍
 spring-redis-distributed-lock 为redisLock项目扩展而来 https://gitee.com/billion/redisLock
 
