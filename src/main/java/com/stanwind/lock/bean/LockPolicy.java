@@ -15,7 +15,7 @@ public enum LockPolicy {
     /**
      * 自旋锁 超时时间timeout
      */
-    SpingLock,
+    SpinLock,
     /**
      * 阻塞锁 无超时自旋
      */

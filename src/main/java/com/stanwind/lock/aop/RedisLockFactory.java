@@ -23,7 +23,7 @@ public class RedisLockFactory {
             case BlockLock:
                 lock = new BlockRedisLock(redisTemplate, lockKey, expireTime);
                 break;
-            case SpingLock:
+            case SpinLock:
                 lock = new SpinRedisLock(redisTemplate, lockKey, expireTime, timeout);
                 break;
             case Lock:
