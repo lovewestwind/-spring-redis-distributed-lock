@@ -1,5 +1,6 @@
 package com.stanwind.lock.redis;
 
+import com.stanwind.lock.bean.LockException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -30,7 +31,7 @@ import redis.clients.jedis.JedisCluster;
  * <p>
  * 如果服务器返回 OK ，那么这个客户端获得锁。 如果服务器返回 NIL ，那么客户端获取锁失败，可以在稍后再重试。
  */
-public abstract class AbstractRedisLock {
+public abstract class AbstractRedisLock implements AutoCloseable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractRedisLock.class);
 
@@ -96,6 +97,10 @@ public abstract class AbstractRedisLock {
      * 锁标记
      */
     protected boolean locked = false;
+
+    public boolean isLocked() {
+        return locked;
+    }
 
     final Random random = new Random();
 
@@ -237,7 +242,14 @@ public abstract class AbstractRedisLock {
         }
     }
 
-//    public static void main(String[] args) {
+    @Override
+    public void close() throws Exception {
+        if (this.isLocked() && !this.unlock()) {
+            throw new LockException("释放分布式锁失败, key=" + lockKey.toString());
+        }
+    }
+
+    //    public static void main(String[] args) {
 //        RedisLock redisLock = new RedisLock(new RedisTemplate(), "RedisLockKey", 10, 500L);
 //        try {
 //            // 获得锁

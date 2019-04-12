@@ -7,6 +7,9 @@ import com.stanwind.lock.redis.AbstractRedisLock;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import javax.annotation.PreDestroy;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -26,6 +29,8 @@ import org.springframework.stereotype.Component;
 public class LockManager {
 
     private static Logger logger = LoggerFactory.getLogger(LockManager.class);
+
+    private static Map<AbstractRedisLock, Thread> locks = new ConcurrentHashMap<>();
 
     @Autowired
     private RedisTemplate redisTemplate;
@@ -51,7 +56,7 @@ public class LockManager {
                 try {
                     String feature = c.newInstance().getFeature();
                     if (feature == null) {
-                        new LockException("feature参数值不能为null");
+                        throw new LockException("feature参数值不能为null");
                     }
 
                     sb.append(feature).append(":");
@@ -82,28 +87,37 @@ public class LockManager {
             }
         }
 
-        AbstractRedisLock redisLock = RedisLockFactory
-                .getLock(lock.policy(), redisTemplate, lockKey.toString(), lock.lockTime(), lock.timetOut());
         Object result = null;
-        try {
-            // 获得锁
-            if (redisLock.lock()) {
-                try {
+        try (AbstractRedisLock redisLock = RedisLockFactory
+                .getLock(lock.policy(), redisTemplate, lockKey.toString(), lock.lockTime(), lock.timetOut())) {
+            try {
+                //置入map 程序结束时释放
+                locks.put(redisLock, Thread.currentThread());
+                // 获得锁
+                if (redisLock.lock()) {
                     result = pjp.proceed();
-                } catch (Exception e) {
-                    throw e;
-                } finally {
-                    if (!redisLock.unlock()) {
-                        logger.warn("释放分布式锁失败, key=" + lockKey.toString());
-                    }
+                } else {
+                    throw new LockException("获取分布式锁失败, key=" + lockKey.toString());
                 }
-            } else {
-                throw new LockException("获取分布式锁失败, key=" + lockKey.toString());
+            } finally {
+                locks.remove(redisLock);
             }
-        } catch (Exception e) {
-            throw e;
         }
+
         return result;
+    }
+
+    @PreDestroy
+    public void destroy() {
+        //shutdownHook
+        while (locks.size() > 0) {
+            logger.info("等待{}个占用锁线程退出\n{}", locks.size(), Arrays.toString(locks.keySet().toArray()));
+            try {
+                Thread.sleep(1000 * 3);
+            } catch (InterruptedException e) {
+                logger.error("等待锁线程退出被中断", e);
+            }
+        }
     }
 
     static <E extends Exception> void doThrow(Exception e) throws E {
