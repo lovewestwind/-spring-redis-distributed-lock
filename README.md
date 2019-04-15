@@ -40,7 +40,7 @@ public boolean service(@LockKey int id, @LockKey String name) {
 | keyPrex       | String           | 类名+方法名 | redis锁的key前缀 如果为空，则默认为类名+方法名                           |
 | featureParams | LockFeatureParam | 无          | 特征字参数方法集，可以增加不在业务方法中的特征参数用于区分锁，防止竞争锁 可实现LockFeatureParam 扩展自定义非业务参数 |
 | lockTime | int | 60 | 锁持续时间，将设定在redis中用于值存在的时间 单位s                                             |
-| timetOut      | long             | 300         | SpinLock超时时间                                                         |
+| timetOut      | long             | 300         | SpinLock超时时间 单位ms                                                  |
 
 #### 代码样例
 ##### 直接使用
